@@ -1,0 +1,118 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="BlueHeighliner.Beacon.App"
+             xmlns:local="using:BlueHeighliner.Beacon"
+             RequestedThemeVariant="Light">
+    <!-- Light = Navy & Steel Blue, Dark = Graphite & Amber (toggled via ThemeService). -->
+
+    <Application.DataTemplates>
+        <local:ViewLocator/>
+    </Application.DataTemplates>
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="SystemAccentColor">#3E7CB1</Color>
+                    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F4F6F9"/>
+                    <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="CardBorderBrush" Color="#D5DCE6"/>
+                    <SolidColorBrush x:Key="PrimaryBrush" Color="#1F3A5F"/>
+                    <SolidColorBrush x:Key="AccentBrush" Color="#3E7CB1"/>
+                    <SolidColorBrush x:Key="AccentHoverBrush" Color="#2F6392"/>
+                    <SolidColorBrush x:Key="AccentForegroundBrush" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="SuccessBrush" Color="#2E7D32"/>
+                    <SolidColorBrush x:Key="WarningBrush" Color="#E65100"/>
+                    <SolidColorBrush x:Key="AppTextBrush" Color="#1A2333"/>
+                    <SolidColorBrush x:Key="MutedTextBrush" Color="#5A6B82"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <Color x:Key="SystemAccentColor">#FFB300</Color>
+                    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#1B1C20"/>
+                    <SolidColorBrush x:Key="CardBrush" Color="#26282E"/>
+                    <SolidColorBrush x:Key="CardBorderBrush" Color="#3A3D45"/>
+                    <SolidColorBrush x:Key="PrimaryBrush" Color="#ECEDEF"/>
+                    <SolidColorBrush x:Key="AccentBrush" Color="#FFB300"/>
+                    <SolidColorBrush x:Key="AccentHoverBrush" Color="#FFC947"/>
+                    <SolidColorBrush x:Key="AccentForegroundBrush" Color="#1B1C20"/>
+                    <SolidColorBrush x:Key="SuccessBrush" Color="#4CAF50"/>
+                    <SolidColorBrush x:Key="WarningBrush" Color="#FF8F00"/>
+                    <SolidColorBrush x:Key="AppTextBrush" Color="#ECEDEF"/>
+                    <SolidColorBrush x:Key="MutedTextBrush" Color="#9AA1AC"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+
+        <Style Selector="Window">
+            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
+        </Style>
+
+        <!-- Page/section headers -->
+        <Style Selector="TextBlock.h1">
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.h2">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
+        </Style>
+
+        <!-- Card container -->
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+
+        <!-- Accent-filled call-to-action button -->
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}"/>
+        </Style>
+        <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}"/>
+        </Style>
+
+        <!-- Destructive action button -->
+        <Style Selector="Button.danger">
+            <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+
+        <!-- Status banner -->
+        <Style Selector="Border.banner">
+            <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="8,4"/>
+        </Style>
+        <Style Selector="Border.banner.error">
+            <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
+        </Style>
+        <Style Selector="Border.banner TextBlock">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <!-- Inline status text (login/account forms) -->
+        <Style Selector="TextBlock.status">
+            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.status.error">
+            <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+        </Style>
+
+        <!-- Muted labels -->
+        <Style Selector="TextBlock.muted">
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}"/>
+        </Style>
+    </Application.Styles>
+</Application>

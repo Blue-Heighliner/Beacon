@@ -1,0 +1,88 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:BlueHeighliner.Beacon.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="650"
+             x:Class="BlueHeighliner.Beacon.Views.UserManagementView"
+             x:DataType="vm:UserManagementViewModel"
+             Background="{DynamicResource AppBackgroundBrush}">
+
+    <Grid RowDefinitions="Auto,Auto,*" Margin="16">
+
+        <!-- Header -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,12">
+            <Button DockPanel.Dock="Right" Content="← Back to Inventory" Command="{Binding BackCommand}"/>
+            <TextBlock Text="Manage Users" Classes="h1" VerticalAlignment="Center"/>
+        </DockPanel>
+
+        <!-- Status banner -->
+        <Border Grid.Row="1" Classes="banner" Classes.error="{Binding StatusIsError}" Margin="0,0,0,8"
+                IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding StatusMessage}"/>
+        </Border>
+
+        <Grid Grid.Row="2" ColumnDefinitions="3*,2*" ColumnSpacing="12">
+
+            <!-- User list -->
+            <DataGrid Grid.Column="0" ItemsSource="{Binding Users}"
+                      SelectedItem="{Binding SelectedUser, Mode=TwoWay}"
+                      IsReadOnly="True" AutoGenerateColumns="False"
+                      SelectionMode="Single"
+                      GridLinesVisibility="Horizontal"
+                      Background="{DynamicResource CardBrush}"
+                      BorderThickness="1" BorderBrush="{DynamicResource CardBorderBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Username" Binding="{Binding Username}" Width="*"/>
+                    <DataGridTextColumn Header="DOD ID" Binding="{Binding DodId}" Width="*"/>
+                    <DataGridCheckBoxColumn Header="Admin" Binding="{Binding IsAdmin}" Width="Auto"/>
+                    <DataGridTextColumn Header="Created (UTC)" Binding="{Binding CreatedAt, StringFormat='yyyy-MM-dd'}" Width="Auto"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <!-- Edit panel -->
+            <Border Grid.Column="1" Classes="card" Padding="16" VerticalAlignment="Top">
+                <StackPanel Spacing="10" IsEnabled="{Binding HasSelection}">
+                    <TextBlock Text="Edit Selected User" Classes="h2"/>
+
+                    <TextBlock Classes="muted" Text="Username"/>
+                    <TextBox Text="{Binding EditUsername}"/>
+                    <TextBlock Classes="muted" Text="DOD ID (10 digits)"/>
+                    <TextBox MaxLength="10" Text="{Binding EditDodId}"/>
+                    <Button Content="Save Info" Classes="primary" Command="{Binding SaveUserInfoCommand}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+
+                    <Separator/>
+
+                    <TextBlock Classes="muted" Text="Reset password"/>
+                    <TextBox Watermark="New password" PasswordChar="•" Text="{Binding ResetPassword}"/>
+                    <Button Content="Reset Password" Command="{Binding ApplyPasswordResetCommand}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+
+                    <TextBlock Classes="muted" Text="Reset badge"/>
+                    <TextBox Watermark="Scan replacement badge" Text="{Binding ResetBadge}"/>
+                    <Button Content="Reset Badge" Command="{Binding ApplyBadgeResetCommand}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+
+                    <Separator/>
+
+                    <Button Name="DeleteUserButton" Content="Delete User" Classes="danger"
+                            IsVisible="{Binding CanDeleteSelected}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+                        <Button.Flyout>
+                            <Flyout Placement="Bottom">
+                                <StackPanel Spacing="8" Width="220">
+                                    <TextBlock Text="Delete this user permanently?" TextWrapping="Wrap"/>
+                                    <Button Name="ConfirmDeleteUserButton" Content="Confirm Delete" Classes="danger"
+                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+    </Grid>
+
+</UserControl>

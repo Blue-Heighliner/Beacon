@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:BlueHeighliner.Beacon.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="650"
+             x:Class="BlueHeighliner.Beacon.Views.AccountView"
+             x:DataType="vm:AccountViewModel"
+             Background="{DynamicResource AppBackgroundBrush}">
+
+    <Border Classes="card" MaxWidth="460" VerticalAlignment="Center" HorizontalAlignment="Stretch"
+            Padding="24">
+        <StackPanel Spacing="14">
+            <TextBlock Text="My Account" Classes="h1" HorizontalAlignment="Center"/>
+
+            <StackPanel Spacing="4">
+                <TextBlock Classes="muted" Text="Username"/>
+                <TextBlock Text="{Binding Username}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource AppTextBrush}"/>
+            </StackPanel>
+            <StackPanel Spacing="4">
+                <TextBlock Classes="muted" Text="DOD ID (cannot be changed)"/>
+                <TextBlock Text="{Binding DodId}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource AppTextBrush}"/>
+            </StackPanel>
+
+            <Separator/>
+
+            <TextBlock Text="Change Password" Classes="h2"/>
+            <TextBox Watermark="Current password" PasswordChar="•" Text="{Binding CurrentPassword}"/>
+            <TextBox Watermark="New password" PasswordChar="•" Text="{Binding NewPassword}"/>
+            <TextBox Watermark="Confirm new password" PasswordChar="•" Text="{Binding NewPasswordConfirm}"/>
+            <Button Content="Change Password" Classes="primary" Command="{Binding ChangePasswordCommand}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+
+            <Separator/>
+
+            <TextBlock Text="Badge" Classes="h2"/>
+            <TextBlock Classes="muted" Text="A badge is registered on this account." IsVisible="{Binding HasBadge}"/>
+            <TextBox Watermark="Scan new badge to register or replace it" Text="{Binding BadgeInput}"/>
+            <Button Content="Save Badge" Command="{Binding ChangeBadgeCommand}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+
+            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" HorizontalAlignment="Center"
+                       Classes="status" Classes.error="{Binding StatusIsError}"
+                       IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+            <Button Content="← Back to Inventory" Command="{Binding BackCommand}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+        </StackPanel>
+    </Border>
+
+</UserControl>
