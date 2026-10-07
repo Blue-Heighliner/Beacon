@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Artemis.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="650"
+             x:Class="Artemis.Views.LoginView"
+             x:DataType="vm:LoginViewModel"
+             Background="{DynamicResource AppBackgroundBrush}">
+
+    <Panel>
+        <Button Content="🌙 / ☀️" Command="{Binding ToggleThemeCommand}"
+                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,12,16,0"
+                ToolTip.Tip="Toggle light / dark theme"/>
+
+        <Border Classes="card" MaxWidth="420" VerticalAlignment="Center" HorizontalAlignment="Stretch"
+                Padding="24">
+            <StackPanel Spacing="16">
+                <TextBlock Text="Artemis Inventory" FontSize="24" FontWeight="Bold"
+                           Foreground="{DynamicResource PrimaryBrush}" HorizontalAlignment="Center"/>
+
+                <TabControl>
+                    <TabItem Header="Sign In">
+                        <StackPanel Spacing="10" Margin="0,12,0,0">
+                            <TextBox Watermark="Username" Text="{Binding Username}"/>
+                            <TextBox Name="PasswordBox" Watermark="Password" PasswordChar="•" Text="{Binding Password}"/>
+                            <Button Content="Sign In" Classes="primary" Command="{Binding LoginCommand}"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+
+                            <Separator Margin="0,8"/>
+
+                            <TextBlock Text="Or scan your badge:" Classes="h2"/>
+                            <TextBox Name="BadgeBox" Watermark="Scan badge here..." Text="{Binding BadgeInput}"/>
+                        </StackPanel>
+                    </TabItem>
+
+                    <TabItem Header="Register">
+                        <StackPanel Spacing="10" Margin="0,12,0,0">
+                            <TextBox Watermark="Username" Text="{Binding RegUsername}"/>
+                            <TextBox Watermark="DOD ID number (10 digits)" MaxLength="10" Text="{Binding RegDodId}"/>
+                            <TextBox Watermark="Password (optional if using a badge)" PasswordChar="•" Text="{Binding RegPassword}"/>
+                            <TextBox Watermark="Confirm password" PasswordChar="•" Text="{Binding RegPasswordConfirm}"/>
+                            <TextBox Watermark="Scan badge (optional if using a password)" Text="{Binding RegBadge}"/>
+                            <Button Content="Create Account" Classes="primary" Command="{Binding RegisterCommand}"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                        </StackPanel>
+                    </TabItem>
+                </TabControl>
+
+                <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" HorizontalAlignment="Center"
+                           Classes="status" Classes.error="{Binding StatusIsError}"
+                           IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </StackPanel>
+        </Border>
+    </Panel>
+
+</UserControl>

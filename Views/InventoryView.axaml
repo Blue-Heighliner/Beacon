@@ -1,0 +1,132 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Artemis.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="650"
+             x:Class="Artemis.Views.InventoryView"
+             x:DataType="vm:InventoryViewModel"
+             Background="{DynamicResource AppBackgroundBrush}">
+
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" Margin="16">
+
+        <!-- Header row: title, current user, navigation -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,12">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <TextBlock VerticalAlignment="Center" Margin="0,0,4,0" Foreground="{DynamicResource AppTextBrush}">
+                    <Run Text="Signed in as "/><Run Text="{Binding CurrentUsername}" FontWeight="Bold"/>
+                </TextBlock>
+                <Button Content="🌙 / ☀️" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Toggle light / dark theme"/>
+                <Button Content="My Account" Command="{Binding ShowAccountCommand}"/>
+                <Button Content="Manage Users" Command="{Binding ShowUserManagementCommand}"
+                        IsVisible="{Binding IsAdmin}"/>
+                <Button Content="Export to Excel" Classes="primary">
+                    <Button.Flyout>
+                        <Flyout Placement="BottomEdgeAlignedRight">
+                            <StackPanel Spacing="6" Width="200">
+                                <Button Name="ExportFilteredButton" Content="Currently filtered list"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                                <Button Name="ExportAllButton" Content="All items"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+                <Button Name="LogoutButton" Content="Log Out">
+                    <Button.Flyout>
+                        <Flyout Placement="BottomEdgeAlignedRight">
+                            <StackPanel Spacing="8" Width="200">
+                                <TextBlock Text="Are you sure you want to log out?" TextWrapping="Wrap"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                    <Button Name="CancelLogoutButton" Content="No"/>
+                                    <Button Name="ConfirmLogoutButton" Content="Yes" Classes="primary"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+            </StackPanel>
+            <TextBlock Text="Artemis Inventory" Classes="h1" VerticalAlignment="Center"/>
+        </DockPanel>
+
+        <!-- Scan entry row -->
+        <Border Grid.Row="1" Classes="card" Padding="12" Margin="0,0,0,8">
+            <Grid ColumnDefinitions="2*,2*,*,Auto" ColumnSpacing="8">
+                <TextBox Grid.Column="0" Name="SerialBox" FontSize="16"
+                         Watermark="Scan or type serial number, then Enter"
+                         Text="{Binding SerialInput}"/>
+                <TextBox Grid.Column="1" Name="ItemNameBox" Watermark="Item name (Enter for category)" Text="{Binding ItemNameInput}"/>
+                <AutoCompleteBox Grid.Column="2" Name="CategoryBox" Watermark="Category (Enter to add)"
+                                 Text="{Binding CategoryInput}"
+                                 ItemsSource="{Binding CategorySuggestions}"
+                                 FilterMode="ContainsOrdinal"/>
+                <Button Grid.Column="3" Content="Add" Classes="primary" Command="{Binding AddItemCommand}"/>
+            </Grid>
+        </Border>
+
+        <!-- Status banner -->
+        <Border Grid.Row="2" Classes="banner" Classes.error="{Binding StatusIsError}" Margin="0,0,0,8"
+                IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding StatusMessage}"/>
+        </Border>
+
+        <!-- Filter row -->
+        <WrapPanel Grid.Row="3" ItemSpacing="8" LineSpacing="8" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="Category:" VerticalAlignment="Center" Foreground="{DynamicResource AppTextBrush}"/>
+                <ComboBox MinWidth="150" ItemsSource="{Binding CategoryFilterOptions}"
+                          SelectedItem="{Binding SelectedCategoryFilter}"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="6" Margin="8,0,0,0">
+                <TextBlock Text="User:" VerticalAlignment="Center" Foreground="{DynamicResource AppTextBrush}"/>
+                <ComboBox MinWidth="150" ItemsSource="{Binding UserFilterOptions}"
+                          SelectedItem="{Binding SelectedUserFilter}"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="6" Margin="8,0,0,0">
+                <TextBlock Text="From:" VerticalAlignment="Center" Foreground="{DynamicResource AppTextBrush}"/>
+                <DatePicker SelectedDate="{Binding FilterFrom}"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="6" Margin="8,0,0,0">
+                <TextBlock Text="To:" VerticalAlignment="Center" Foreground="{DynamicResource AppTextBrush}"/>
+                <DatePicker SelectedDate="{Binding FilterTo}"/>
+            </StackPanel>
+
+            <Button Content="Clear Filters" Command="{Binding ClearFiltersCommand}" Margin="8,0,0,0"/>
+
+            <Button Name="DeleteButton" Content="Delete Selected" Classes="danger" Margin="8,0,0,0"
+                    IsEnabled="{Binding SelectedItem, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <Button.Flyout>
+                    <Flyout Placement="Bottom">
+                        <StackPanel Spacing="8" Width="220">
+                            <TextBlock Text="Delete the selected item?" TextWrapping="Wrap"/>
+                            <Button Name="ConfirmDeleteButton" Content="Confirm Delete" Classes="danger"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                        </StackPanel>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
+        </WrapPanel>
+
+        <!-- Inventory grid -->
+        <DataGrid Grid.Row="4" ItemsSource="{Binding Items}"
+                  SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                  IsReadOnly="True" AutoGenerateColumns="False"
+                  SelectionMode="Single"
+                  GridLinesVisibility="Horizontal"
+                  Background="{DynamicResource CardBrush}"
+                  BorderThickness="1" BorderBrush="{DynamicResource CardBorderBrush}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Serial Number" Binding="{Binding SerialNumber}" Width="*"/>
+                <DataGridTextColumn Header="Item Name" Binding="{Binding ItemName}" Width="*"/>
+                <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="*"/>
+                <DataGridTextColumn Header="Inserted By" Binding="{Binding InsertedBy}" Width="*"/>
+                <DataGridTextColumn Header="Created At" Binding="{Binding CreatedAtLocal, StringFormat='yyyy-MM-dd HH:mm:ss'}" Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+    </Grid>
+
+</UserControl>
