@@ -1,10 +1,28 @@
 namespace BlueHeighliner.Beacon.ViewModels;
 
-/// <summary>Owns navigation between the login, inventory, account, and user management screens.</summary>
-internal sealed partial class MainWindowViewModel(IDatabase database, IAuthService auth, IItemRepository items, IUserRepository users, IThemeService theme, IInputValidator validator, IExcelExportService excel) : ViewModelBase
+/// <summary>Prepares the app on startup and exposes whichever screen the navigation is showing.</summary>
+internal sealed class MainWindowViewModel : ViewModelBase
 {
-    [ObservableProperty]
-    private ViewModelBase? currentViewModel;
+    private readonly IDatabase database;
+
+    private readonly IAuthService auth;
+
+    private readonly INavigation navigation;
+
+    /// <summary>Initializes a new instance of the <see cref="MainWindowViewModel" /> class.</summary>
+    /// <param name="database">The database to prepare on startup.</param>
+    /// <param name="auth">Ensures the built-in admin account exists.</param>
+    /// <param name="navigation">Supplies and changes the current screen.</param>
+    public MainWindowViewModel(IDatabase database, IAuthService auth, INavigation navigation)
+    {
+        this.database = database;
+        this.auth = auth;
+        this.navigation = navigation;
+        navigation.Changed += () => OnPropertyChanged(nameof(CurrentViewModel));
+    }
+
+    /// <summary>Gets the view model of the screen being shown.</summary>
+    public ViewModelBase? CurrentViewModel => navigation.Current;
 
     /// <summary>Prepares the database and admin account, then shows the login screen.</summary>
     /// <param name="cancellation">Cancels startup.</param>
@@ -12,32 +30,6 @@ internal sealed partial class MainWindowViewModel(IDatabase database, IAuthServi
     {
         await database.Initialize(cancellation);
         await auth.EnsureAdminAccount(cancellation);
-        await ShowLogin();
-    }
-
-    private Task ShowLogin()
-    {
-        CurrentViewModel = new LoginViewModel(auth, theme, ShowInventory);
-        return Task.CompletedTask;
-    }
-
-    private async Task ShowInventory()
-    {
-        InventoryViewModel inventory = new(auth, items, theme, validator, excel, ShowLogin, ShowAccount, ShowUserManagement);
-        await inventory.Load();
-        CurrentViewModel = inventory;
-    }
-
-    private Task ShowAccount()
-    {
-        CurrentViewModel = new AccountViewModel(auth, ShowInventory);
-        return Task.CompletedTask;
-    }
-
-    private async Task ShowUserManagement()
-    {
-        UserManagementViewModel management = new(auth, users, ShowInventory);
-        await management.Load();
-        CurrentViewModel = management;
+        await navigation.ShowLogin();
     }
 }

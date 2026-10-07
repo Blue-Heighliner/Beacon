@@ -7,6 +7,13 @@ public sealed class InventoryViewModelTests
     private readonly Mock<IThemeService> theme = new();
     private readonly Mock<IInputValidator> validator = new();
     private readonly Mock<IExcelExportService> excel = new();
+    private readonly Mock<IFilePicker> picker = new();
+    private readonly Mock<IClock> clock = new();
+    private readonly Mock<IUiTimerFactory> timers = new();
+    private readonly Mock<IUiTimer> timer = new();
+    private readonly Mock<INavigation> navigation = new();
+    private readonly DateTime now = new(2024, 5, 6, 7, 8, 9, DateTimeKind.Utc);
+    private Action? onTick;
     private readonly InventoryItem existing = new() { Id = 3, SerialNumber = "SN1", ItemName = "Radio", Category = "Comms", InsertedBy = "bob", CreatedAt = DateTime.UtcNow };
     private readonly InventoryViewModel viewModel;
 
@@ -18,7 +25,13 @@ public sealed class InventoryViewModelTests
         items.Setup(x => x.GetCategories(default)).ReturnsAsync(["Comms"]);
         items.Setup(x => x.GetInsertingUsers(default)).ReturnsAsync(["bob"]);
         items.Setup(x => x.TryInsert(It.IsAny<InventoryItem>(), default)).ReturnsAsync(true);
-        viewModel = new InventoryViewModel(auth.Object, items.Object, theme.Object, validator.Object, excel.Object, () => Task.CompletedTask, () => Task.CompletedTask, () => Task.CompletedTask);
+        clock.Setup(x => x.UtcNow).Returns(now);
+        timers.Setup(x => x.Create(TimeSpan.FromSeconds(4), It.IsAny<Action>())).Returns((TimeSpan _, Action tick) =>
+        {
+            onTick = tick;
+            return timer.Object;
+        });
+        viewModel = new InventoryViewModel(auth.Object, items.Object, theme.Object, validator.Object, excel.Object, picker.Object, clock.Object, timers.Object, navigation.Object);
     }
 
     [Fact]
@@ -64,7 +77,7 @@ public sealed class InventoryViewModelTests
 
         await viewModel.AddItemCommand.ExecuteAsync(null);
 
-        items.Verify(x => x.TryInsert(It.Is<InventoryItem>(i => i.SerialNumber == "SN2" && i.ItemName == "Laptop" && i.Category == "IT" && i.InsertedBy == "bob"), default), Times.Once);
+        items.Verify(x => x.TryInsert(It.Is<InventoryItem>(i => i.SerialNumber == "SN2" && i.ItemName == "Laptop" && i.Category == "IT" && i.InsertedBy == "bob" && i.CreatedAt == now), default), Times.Once);
         Assert.Equal("Added SN2", viewModel.StatusMessage);
         Assert.Equal("", viewModel.SerialInput);
         Assert.Equal(" Laptop ", viewModel.ItemNameInput);
@@ -145,6 +158,7 @@ public sealed class InventoryViewModelTests
         await viewModel.LogoutCommand.ExecuteAsync(null);
 
         auth.Verify(x => x.Logout(), Times.Once);
+        navigation.Verify(x => x.ShowLogin(), Times.Once);
     }
 
     [Fact]
@@ -156,22 +170,69 @@ public sealed class InventoryViewModelTests
     }
 
     [Fact]
-    public async Task Export_FilteredOnly_UsesGridItems()
+    public async Task ShowAccountAndUserManagement_Navigate()
     {
+        await viewModel.ShowAccountCommand.ExecuteAsync(null);
+        await viewModel.ShowUserManagementCommand.ExecuteAsync(null);
+
+        navigation.Verify(x => x.ShowAccount(), Times.Once);
+        navigation.Verify(x => x.ShowUserManagement(), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExportFiltered_UsesGridItemsAndSuggestsADatedFileName()
+    {
+        picker.Setup(x => x.PickExcelSavePath($"Inventory-{now.ToLocalTime():yyyy-MM-dd}.xlsx")).ReturnsAsync("out.xlsx");
         await viewModel.Load();
 
-        await viewModel.Export("out.xlsx", filteredOnly: true);
+        await viewModel.ExportFilteredCommand.ExecuteAsync(null);
 
         excel.Verify(x => x.Export("out.xlsx", It.Is<IEnumerable<InventoryItem>>(e => e.Single() == existing), default), Times.Once);
         Assert.Equal("Exported 1 item(s) to out.xlsx", viewModel.StatusMessage);
     }
 
     [Fact]
-    public async Task Export_All_QueriesEveryItem()
+    public async Task ExportAll_QueriesEveryItem()
     {
-        await viewModel.Export("all.xlsx", filteredOnly: false);
+        picker.Setup(x => x.PickExcelSavePath(It.IsAny<string>())).ReturnsAsync("all.xlsx");
+
+        await viewModel.ExportAllCommand.ExecuteAsync(null);
 
         items.Verify(x => x.Query(null, null, null, null, default), Times.Once);
         excel.Verify(x => x.Export("all.xlsx", It.IsAny<IEnumerable<InventoryItem>>(), default), Times.Once);
+    }
+
+    [Fact]
+    public async Task Export_WhenPickerCancelled_DoesNothing()
+    {
+        await viewModel.ExportAllCommand.ExecuteAsync(null);
+
+        excel.Verify(x => x.Export(It.IsAny<string>(), It.IsAny<IEnumerable<InventoryItem>>(), default), Times.Never);
+        Assert.Equal("", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public async Task StatusBanner_ClearsWhenTheTimerTicks()
+    {
+        viewModel.SerialInput = "SN2";
+        await viewModel.AddItemCommand.ExecuteAsync(null);
+        Assert.Equal("Added SN2", viewModel.StatusMessage);
+
+        onTick!();
+
+        Assert.Equal("", viewModel.StatusMessage);
+        timer.Verify(x => x.Restart(), Times.Once);
+    }
+
+    [Fact]
+    public async Task StatusBanner_ReusesOneTimerAcrossMessages()
+    {
+        viewModel.SerialInput = "SN2";
+        await viewModel.AddItemCommand.ExecuteAsync(null);
+        viewModel.SerialInput = "SN3";
+        await viewModel.AddItemCommand.ExecuteAsync(null);
+
+        timers.Verify(x => x.Create(It.IsAny<TimeSpan>(), It.IsAny<Action>()), Times.Once);
+        timer.Verify(x => x.Restart(), Times.Exactly(2));
     }
 }

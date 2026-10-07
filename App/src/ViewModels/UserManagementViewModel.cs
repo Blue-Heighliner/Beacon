@@ -1,7 +1,7 @@
 namespace BlueHeighliner.Beacon.ViewModels;
 
 /// <summary>Administrator screen for editing, resetting, and deleting other users.</summary>
-internal sealed partial class UserManagementViewModel(IAuthService auth, IUserRepository users, Func<Task> onBack) : ViewModelBase
+internal sealed partial class UserManagementViewModel(IAuthService auth, IUserRepository users, INavigation navigation) : ViewModelBase, ILoadable
 {
     [ObservableProperty]
     private User? selectedUser;
@@ -125,7 +125,7 @@ internal sealed partial class UserManagementViewModel(IAuthService auth, IUserRe
     }
 
     [RelayCommand]
-    private Task Back() => onBack();
+    private Task Back() => navigation.ShowInventory();
 
     private async Task RefreshUsers(long? keepSelectedId = null)
     {

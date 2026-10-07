@@ -2,65 +2,34 @@ namespace BlueHeighliner.Beacon.Tests.Unit.ViewModels;
 
 public sealed class MainWindowViewModelTests
 {
+    private readonly Mock<IDatabase> database = new();
+    private readonly Mock<IAuthService> auth = new();
+    private readonly Mock<INavigation> navigation = new();
+    private readonly MainWindowViewModel viewModel;
+
+    public MainWindowViewModelTests() => viewModel = new MainWindowViewModel(database.Object, auth.Object, navigation.Object);
+
     [Fact]
     public async Task Start_InitializesDatabaseAndAdmin_ThenShowsLogin()
     {
-        Mock<IDatabase> database = new();
-        Mock<IAuthService> auth = new();
-        MainWindowViewModel viewModel = new(database.Object, auth.Object, Mock.Of<IItemRepository>(), Mock.Of<IUserRepository>(), Mock.Of<IThemeService>(), Mock.Of<IInputValidator>(), Mock.Of<IExcelExportService>());
-
         await viewModel.Start();
 
         database.Verify(x => x.Initialize(default), Times.Once);
         auth.Verify(x => x.EnsureAdminAccount(default), Times.Once);
-        Assert.IsType<LoginViewModel>(viewModel.CurrentViewModel);
+        navigation.Verify(x => x.ShowLogin(), Times.Once);
     }
 
     [Fact]
-    public async Task SuccessfulLogin_NavigatesToInventory_AndLogoutReturnsToLogin()
+    public void CurrentViewModel_ReflectsNavigation_AndRaisesWhenItChanges()
     {
-        Mock<IAuthService> auth = new();
-        auth.Setup(x => x.LoginWithBarcode("badge", default)).ReturnsAsync(true);
-        Mock<IItemRepository> items = new();
-        items.Setup(x => x.Query(null, null, null, null, default)).ReturnsAsync([]);
-        items.Setup(x => x.GetCategories(default)).ReturnsAsync([]);
-        items.Setup(x => x.GetInsertingUsers(default)).ReturnsAsync([]);
-        MainWindowViewModel viewModel = new(Mock.Of<IDatabase>(), auth.Object, items.Object, Mock.Of<IUserRepository>(), Mock.Of<IThemeService>(), Mock.Of<IInputValidator>(), Mock.Of<IExcelExportService>());
-        await viewModel.Start();
+        LoginViewModel login = new(auth.Object, Mock.Of<IThemeService>(), navigation.Object);
+        navigation.Setup(x => x.Current).Returns(login);
+        List<string?> raised = [];
+        viewModel.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
 
-        LoginViewModel login = Assert.IsType<LoginViewModel>(viewModel.CurrentViewModel);
-        login.BadgeInput = "badge";
-        await login.BadgeLoginCommand.ExecuteAsync(null);
+        navigation.Raise(x => x.Changed += null);
 
-        InventoryViewModel inventory = Assert.IsType<InventoryViewModel>(viewModel.CurrentViewModel);
-        await inventory.LogoutCommand.ExecuteAsync(null);
-
-        Assert.IsType<LoginViewModel>(viewModel.CurrentViewModel);
-        auth.Verify(x => x.Logout(), Times.Once);
-    }
-
-    [Fact]
-    public async Task Inventory_CanNavigateToAccountAndUserManagement()
-    {
-        Mock<IAuthService> auth = new();
-        auth.Setup(x => x.LoginWithBarcode("badge", default)).ReturnsAsync(true);
-        Mock<IItemRepository> items = new();
-        items.Setup(x => x.Query(null, null, null, null, default)).ReturnsAsync([]);
-        items.Setup(x => x.GetCategories(default)).ReturnsAsync([]);
-        items.Setup(x => x.GetInsertingUsers(default)).ReturnsAsync([]);
-        Mock<IUserRepository> users = new();
-        users.Setup(x => x.GetAll(default)).ReturnsAsync([]);
-        MainWindowViewModel viewModel = new(Mock.Of<IDatabase>(), auth.Object, items.Object, users.Object, Mock.Of<IThemeService>(), Mock.Of<IInputValidator>(), Mock.Of<IExcelExportService>());
-        await viewModel.Start();
-        LoginViewModel login = Assert.IsType<LoginViewModel>(viewModel.CurrentViewModel);
-        login.BadgeInput = "badge";
-        await login.BadgeLoginCommand.ExecuteAsync(null);
-
-        await Assert.IsType<InventoryViewModel>(viewModel.CurrentViewModel).ShowAccountCommand.ExecuteAsync(null);
-        Assert.IsType<AccountViewModel>(viewModel.CurrentViewModel);
-
-        await Assert.IsType<AccountViewModel>(viewModel.CurrentViewModel).BackCommand.ExecuteAsync(null);
-        await Assert.IsType<InventoryViewModel>(viewModel.CurrentViewModel).ShowUserManagementCommand.ExecuteAsync(null);
-        Assert.IsType<UserManagementViewModel>(viewModel.CurrentViewModel);
+        Assert.Same(login, viewModel.CurrentViewModel);
+        Assert.Contains(nameof(MainWindowViewModel.CurrentViewModel), raised);
     }
 }

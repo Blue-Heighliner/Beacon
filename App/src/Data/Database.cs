@@ -16,7 +16,7 @@ internal interface IDatabase
     Task Initialize(CancellationToken cancellation = default);
 }
 
-internal sealed class Database(string path, IDodIdCipher cipher) : IDatabase
+internal sealed class Database(IAppPaths paths, IDodIdCipher cipher, IDodIdHasher hasher) : IDatabase
 {
     private readonly string createSchemaSql = """
         CREATE TABLE IF NOT EXISTS Users (
@@ -48,18 +48,18 @@ internal sealed class Database(string path, IDodIdCipher cipher) : IDatabase
         ["DodIdHash"] = "ALTER TABLE Users ADD COLUMN DodIdHash TEXT NOT NULL DEFAULT ''",
     };
 
-    public string FilePath => path;
+    public string FilePath => paths.DatabasePath;
 
     public async Task<SqliteConnection> Open(CancellationToken cancellation = default)
     {
-        SqliteConnection connection = new($"Data Source={path};Pooling=False");
+        SqliteConnection connection = new($"Data Source={paths.DatabasePath};Pooling=False");
         await connection.OpenAsync(cancellation);
         return connection;
     }
 
     public async Task Initialize(CancellationToken cancellation = default)
     {
-        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(paths.DatabasePath)!);
 
         await using SqliteConnection connection = await Open(cancellation);
         await Execute(connection, createSchemaSql, cancellation);
@@ -126,7 +126,7 @@ internal sealed class Database(string path, IDodIdCipher cipher) : IDatabase
             await using SqliteCommand update = connection.CreateCommand();
             update.CommandText = "UPDATE Users SET DodId = $dodId, DodIdHash = $dodIdHash WHERE Id = $id";
             update.Parameters.AddWithValue("$dodId", cipher.Encrypt(plaintext));
-            update.Parameters.AddWithValue("$dodIdHash", cipher.Hash(plaintext));
+            update.Parameters.AddWithValue("$dodIdHash", hasher.Hash(plaintext));
             update.Parameters.AddWithValue("$id", id);
             await update.ExecuteNonQueryAsync(cancellation);
         }

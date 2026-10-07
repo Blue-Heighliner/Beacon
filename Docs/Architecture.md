@@ -18,9 +18,9 @@ Passwords are hashed with PBKDF2-SHA256 (100,000 iterations, random per-user sal
 
 DPAPI binds ciphertext to the Windows user with no key to manage, so it is used on Windows. DPAPI does not exist elsewhere, so other platforms use AES-GCM with a random key kept in a user-only file next to the database. The alternative of failing on Linux would have made the Linux build unusable; the accepted trade-off is that the Linux key file is only as protected as the user's file permissions.
 
-## Hand-composed dependencies
+## Dependency injection and seams
 
-Services and repositories are wired by hand in one composition root instead of a DI container. The graph is small and static, and a container would add a runtime dependency and a license notice for no benefit. Interfaces still exist for every service so tests can mock them.
+Everything is wired through `Microsoft.Extensions.DependencyInjection` from one registration method, and constructor injection always uses interfaces. Hand-wiring was rejected once view models started needing more than a few collaborators, and because screens are created by navigation rather than by `App`, which needs a provider anyway. Anything nondeterministic or environmental sits behind its own interface (clock, paths, key storage, file dialog, UI timer, password hashing) so unit tests never depend on real time, disk, dialogs, or slow key derivation. The accepted cost is more small interfaces and one extra dependency, whose license is covered in `THIRD-PARTY-NOTICES.txt`.
 
 ## Immutable models
 

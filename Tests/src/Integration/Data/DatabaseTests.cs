@@ -19,8 +19,10 @@ public sealed class DatabaseTests
     public async Task Initialize_MigratesLegacyDatabase_AndEncryptsPlaintextDodIds()
     {
         using TempDirectory directory = new();
-        DodIdCipher cipher = new(directory.File("dodid.key"));
-        Database database = new(directory.File("inventory.db"), cipher);
+        AppPaths paths = new(directory.Path);
+        AesDodIdCipher cipher = new(new FileKeyStore(paths));
+        DodIdHasher hasher = new();
+        Database database = new(paths, cipher, hasher);
         await using (SqliteConnection legacy = new($"Data Source={database.FilePath};Pooling=False"))
         {
             await legacy.OpenAsync();
@@ -37,7 +39,7 @@ public sealed class DatabaseTests
 
         await database.Initialize();
 
-        UserRepository users = new(database, cipher);
+        UserRepository users = new(database, cipher, hasher);
         User? migrated = await users.GetByDodId("1234567890");
         Assert.Equal("old", migrated?.Username);
         Assert.Equal("1234567890", migrated?.DodId);

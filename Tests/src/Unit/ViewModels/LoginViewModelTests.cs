@@ -4,14 +4,19 @@ public sealed class LoginViewModelTests
 {
     private readonly Mock<IAuthService> auth = new();
     private readonly Mock<IThemeService> theme = new();
-    private int signedIn;
+    private readonly Mock<INavigation> navigation = new();
     private readonly LoginViewModel viewModel;
+    private int signedIn;
 
-    public LoginViewModelTests() => viewModel = new LoginViewModel(auth.Object, theme.Object, () =>
+    public LoginViewModelTests()
     {
-        signedIn++;
-        return Task.CompletedTask;
-    });
+        navigation.Setup(x => x.ShowInventory()).Returns(() =>
+        {
+            signedIn++;
+            return Task.CompletedTask;
+        });
+        viewModel = new LoginViewModel(auth.Object, theme.Object, navigation.Object);
+    }
 
     [Fact]
     public async Task Login_WithMissingFields_ShowsError()

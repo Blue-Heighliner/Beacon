@@ -4,12 +4,19 @@ public sealed class AuthServiceTests
 {
     private readonly Mock<IUserRepository> users = new();
     private readonly Mock<IInputValidator> validator = new();
+    private readonly Mock<ICredentialHasher> hasher = new();
+    private readonly Mock<IClock> clock = new();
+    private readonly DateTime now = new(2024, 5, 6, 7, 8, 9, DateTimeKind.Utc);
     private readonly AuthService auth;
 
     public AuthServiceTests()
     {
         validator.Setup(x => x.RejectionMessage).Returns("rejected");
-        auth = new AuthService(users.Object, validator.Object);
+        hasher.Setup(x => x.HashPassword(It.IsAny<string>())).Returns((string p) => ("hash:" + p, "salt"));
+        hasher.Setup(x => x.VerifyPassword(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).Returns((string p, string h, string _) => h == "hash:" + p);
+        hasher.Setup(x => x.HashBarcode(It.IsAny<string>())).Returns((string b) => "barcode:" + b);
+        clock.Setup(x => x.UtcNow).Returns(now);
+        auth = new AuthService(users.Object, validator.Object, hasher.Object, clock.Object);
     }
 
     [Fact]
@@ -19,7 +26,7 @@ public sealed class AuthServiceTests
 
         await auth.EnsureAdminAccount();
 
-        users.Verify(x => x.Create(It.Is<User>(u => u.Username == "admin" && u.IsAdmin && u.PasswordHash != null && u.PasswordSalt != null), default), Times.Once);
+        users.Verify(x => x.Create(It.Is<User>(u => u.Username == "admin" && u.IsAdmin && u.PasswordHash == "hash:TestAdmin123" && u.PasswordSalt == "salt" && u.CreatedAt == now), default), Times.Once);
     }
 
     [Fact]
@@ -94,7 +101,7 @@ public sealed class AuthServiceTests
         (bool success, _) = await auth.Register(" bob ", "secret1", "badge", "1234567890");
 
         Assert.True(success);
-        users.Verify(x => x.Create(It.Is<User>(u => u.Username == "bob" && u.DodId == "1234567890" && u.PasswordHash != "secret1" && u.PasswordHash != null && u.BarcodeHash != null && u.BarcodeHash != "badge"), default), Times.Once);
+        users.Verify(x => x.Create(It.Is<User>(u => u.Username == "bob" && u.DodId == "1234567890" && u.PasswordHash == "hash:secret1" && u.BarcodeHash == "barcode:badge" && u.CreatedAt == now), default), Times.Once);
     }
 
     [Fact]
@@ -115,6 +122,14 @@ public sealed class AuthServiceTests
         Assert.False(await auth.LoginWithPassword("bob", "wrong"));
         Assert.False(await auth.LoginWithPassword("nobody", "secret1"));
         Assert.Null(auth.CurrentUser);
+    }
+
+    [Fact]
+    public async Task LoginWithPassword_Fails_ForBadgeOnlyAccount()
+    {
+        users.Setup(x => x.GetByUsername("bob", default)).ReturnsAsync(NewUser("bob") with { BarcodeHash = "HASH" });
+
+        Assert.False(await auth.LoginWithPassword("bob", "anything"));
     }
 
     [Fact]
@@ -159,8 +174,8 @@ public sealed class AuthServiceTests
         (bool success, _) = await auth.ChangePassword("secret1", "newsecret");
 
         Assert.True(success);
-        users.Verify(x => x.Update(It.Is<User>(u => u.Id == bob.Id && u.PasswordHash != bob.PasswordHash), default), Times.Once);
-        Assert.NotEqual(bob.PasswordHash, auth.CurrentUser?.PasswordHash);
+        users.Verify(x => x.Update(It.Is<User>(u => u.Id == bob.Id && u.PasswordHash == "hash:newsecret"), default), Times.Once);
+        Assert.Equal("hash:newsecret", auth.CurrentUser?.PasswordHash);
     }
 
     [Fact]
@@ -187,7 +202,7 @@ public sealed class AuthServiceTests
         (bool success, _) = await auth.ChangeBadge("badge");
 
         Assert.True(success);
-        Assert.NotNull(auth.CurrentUser?.BarcodeHash);
+        Assert.Equal("barcode:badge", auth.CurrentUser?.BarcodeHash);
         users.Verify(x => x.Update(It.Is<User>(u => u.BarcodeHash != null), default), Times.Once);
     }
 
@@ -257,7 +272,7 @@ public sealed class AuthServiceTests
         (bool success, _) = await auth.AdminResetPassword(target, "newsecret");
 
         Assert.True(success);
-        users.Verify(x => x.Update(It.Is<User>(u => u.Id == 5 && u.PasswordHash != null), default), Times.Once);
+        users.Verify(x => x.Update(It.Is<User>(u => u.Id == 5 && u.PasswordHash == "hash:newsecret"), default), Times.Once);
     }
 
     [Fact]
@@ -268,7 +283,7 @@ public sealed class AuthServiceTests
         (bool success, _) = await auth.AdminResetBadge(NewUser("target") with { Id = 5 }, "badge");
 
         Assert.True(success);
-        users.Verify(x => x.Update(It.Is<User>(u => u.Id == 5 && u.BarcodeHash != null), default), Times.Once);
+        users.Verify(x => x.Update(It.Is<User>(u => u.Id == 5 && u.BarcodeHash == "barcode:badge"), default), Times.Once);
     }
 
     [Fact]

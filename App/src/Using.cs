@@ -28,3 +28,4 @@ global using ClosedXML.Excel;
 global using CommunityToolkit.Mvvm.ComponentModel;
 global using CommunityToolkit.Mvvm.Input;
 global using Microsoft.Data.Sqlite;
+global using Microsoft.Extensions.DependencyInjection;

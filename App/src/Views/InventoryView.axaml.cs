@@ -48,8 +48,8 @@ internal sealed partial class InventoryView : UserControl
         // is open, which would otherwise swallow the commit.
         CategoryBox.AddHandler(KeyDownEvent, OnCategoryKeyDown, handledEventsToo: true);
 
-        ExportFilteredButton.Click += async (_, _) => await Export(filteredOnly: true);
-        ExportAllButton.Click += async (_, _) => await Export(filteredOnly: false);
+        ExportFilteredButton.Click += (_, _) => (DataContext as InventoryViewModel)?.ExportFilteredCommand.Execute(null);
+        ExportAllButton.Click += (_, _) => (DataContext as InventoryViewModel)?.ExportAllCommand.Execute(null);
 
         // Executed from code-behind: command bindings inside a Flyout popup don't reliably
         // resolve the view's DataContext.
@@ -97,33 +97,5 @@ internal sealed partial class InventoryView : UserControl
 
         vm.AddItemCommand.Execute(null);
         SerialBox.Focus();
-    }
-
-    private async Task Export(bool filteredOnly)
-    {
-        if (DataContext is not InventoryViewModel vm)
-        {
-            return;
-        }
-
-        TopLevel? topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel is null)
-        {
-            return;
-        }
-
-        IStorageFile? file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
-        {
-            Title = "Export Inventory to Excel",
-            SuggestedFileName = $"Inventory-{DateTime.Now:yyyy-MM-dd}.xlsx",
-            DefaultExtension = "xlsx",
-            FileTypeChoices = [new FilePickerFileType("Excel Workbook") { Patterns = ["*.xlsx"] }],
-        });
-        if (file is null)
-        {
-            return;
-        }
-
-        await vm.Export(file.Path.LocalPath, filteredOnly);
     }
 }

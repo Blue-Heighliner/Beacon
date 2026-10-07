@@ -6,12 +6,13 @@ public sealed class UserManagementViewModelTests
     private readonly Mock<IUserRepository> users = new();
     private readonly User alice = new() { Id = 1, Username = "alice", DodId = "1111111111", CreatedAt = DateTime.UtcNow };
     private readonly User root = new() { Id = 2, Username = "root", DodId = "2222222222", IsAdmin = true, CreatedAt = DateTime.UtcNow };
+    private readonly Mock<INavigation> navigation = new();
     private readonly UserManagementViewModel viewModel;
 
     public UserManagementViewModelTests()
     {
         users.Setup(x => x.GetAll(default)).ReturnsAsync([alice, root]);
-        viewModel = new UserManagementViewModel(auth.Object, users.Object, () => Task.CompletedTask);
+        viewModel = new UserManagementViewModel(auth.Object, users.Object, navigation.Object);
     }
 
     [Fact]
@@ -124,5 +125,58 @@ public sealed class UserManagementViewModelTests
         await viewModel.DeleteSelectedUserCommand.ExecuteAsync(null);
 
         Assert.Equal("no", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public async Task DeleteSelectedUser_WithoutSelection_DoesNothing()
+    {
+        await viewModel.DeleteSelectedUserCommand.ExecuteAsync(null);
+
+        auth.Verify(x => x.AdminDeleteUser(It.IsAny<User>(), default), Times.Never);
+    }
+
+    [Fact]
+    public async Task ApplyPasswordResetAndBadgeReset_WithoutSelection_DoNothing()
+    {
+        await viewModel.ApplyPasswordResetCommand.ExecuteAsync(null);
+        await viewModel.ApplyBadgeResetCommand.ExecuteAsync(null);
+
+        auth.Verify(x => x.AdminResetPassword(It.IsAny<User>(), It.IsAny<string>(), default), Times.Never);
+        auth.Verify(x => x.AdminResetBadge(It.IsAny<User>(), It.IsAny<string>(), default), Times.Never);
+    }
+
+    [Fact]
+    public async Task ApplyPasswordReset_Failure_ShowsError()
+    {
+        auth.Setup(x => x.AdminResetPassword(alice, "x", default)).ReturnsAsync((false, "too short"));
+        await viewModel.Load();
+        viewModel.SelectedUser = alice;
+        viewModel.ResetPassword = "x";
+
+        await viewModel.ApplyPasswordResetCommand.ExecuteAsync(null);
+
+        Assert.Equal("too short", viewModel.StatusMessage);
+        Assert.True(viewModel.StatusIsError);
+    }
+
+    [Fact]
+    public async Task ApplyBadgeReset_Success_ReportsResult()
+    {
+        auth.Setup(x => x.AdminResetBadge(alice, "badge", default)).ReturnsAsync((true, ""));
+        await viewModel.Load();
+        viewModel.SelectedUser = alice;
+        viewModel.ResetBadge = "badge";
+
+        await viewModel.ApplyBadgeResetCommand.ExecuteAsync(null);
+
+        Assert.Equal("Badge updated for 'alice'.", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public async Task Back_InvokesCallback()
+    {
+        await viewModel.BackCommand.ExecuteAsync(null);
+
+        navigation.Verify(x => x.ShowInventory(), Times.Once);
     }
 }

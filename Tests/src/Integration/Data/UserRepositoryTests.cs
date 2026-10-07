@@ -5,7 +5,7 @@ public sealed class UserRepositoryTests : IDisposable
     private readonly DataFixture fixture = new();
     private readonly UserRepository users;
 
-    public UserRepositoryTests() => users = new UserRepository(fixture.Database, fixture.Cipher);
+    public UserRepositoryTests() => users = new UserRepository(fixture.Database, fixture.Cipher, fixture.Hasher);
 
     public void Dispose() => fixture.Dispose();
 

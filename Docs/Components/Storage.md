@@ -1,6 +1,6 @@
 # Storage
 
-Covers `Database`, `DodIdCipher`, `UserRepository`, and `ItemRepository`: the SQLite file, its schema upgrades, and DOD ID protection.
+Covers `Database`, the DOD ID cipher and hasher, `FileKeyStore`, `UserRepository`, and `ItemRepository`: the SQLite file, its schema upgrades, and DOD ID protection.
 
 ## Connections
 
@@ -20,4 +20,4 @@ Early builds stored the DOD ID as ten plaintext digits. Initialization finds suc
 
 ## DOD ID cipher
 
-On Windows the value is DPAPI-protected for the current user with a fixed entropy string that scopes the blob to this purpose. Elsewhere it is AES-GCM, stored as base64 of nonce, tag, and ciphertext, with the key generated on first use and written with user-only permissions.
+`IDodIdCipher` has two implementations chosen at registration by platform. On Windows `DpapiDodIdCipher` DPAPI-protects the value for the current user, with a fixed entropy string scoping the blob to this purpose. Elsewhere `AesDodIdCipher` uses AES-GCM, stored as base64 of nonce, tag, and ciphertext, with the key supplied by `IKeyStore`; `FileKeyStore` generates it on first use and writes it with user-only permissions. The deterministic lookup hash lives separately in `IDodIdHasher` because it must not vary by platform.

@@ -77,11 +77,8 @@ internal interface IAuthService
     Task<(bool Success, string Error)> AdminDeleteUser(User target, CancellationToken cancellation = default);
 }
 
-internal sealed class AuthService(IUserRepository users, IInputValidator validator) : IAuthService
+internal sealed class AuthService(IUserRepository users, IInputValidator validator, ICredentialHasher hasher, IClock clock) : IAuthService
 {
-    private readonly int pbkdf2Iterations = 100_000;
-    private readonly int saltSize = 16;
-    private readonly int hashSize = 32;
     private readonly string adminUsername = "admin";
     private readonly string adminDefaultPassword = "TestAdmin123";
     private readonly Regex dodIdPattern = new(@"^\d{10}$", RegexOptions.Compiled);
@@ -95,7 +92,7 @@ internal sealed class AuthService(IUserRepository users, IInputValidator validat
             return;
         }
 
-        await users.Create(WithPassword(new User { Username = adminUsername, DodId = "0000000000", IsAdmin = true, CreatedAt = DateTime.UtcNow }, adminDefaultPassword), cancellation);
+        await users.Create(WithPassword(new User { Username = adminUsername, DodId = "0000000000", IsAdmin = true, CreatedAt = clock.UtcNow }, adminDefaultPassword), cancellation);
     }
 
     public async Task<(bool Success, string Error)> Register(string username, string? password, string? barcode, string dodId, CancellationToken cancellation = default)
@@ -133,7 +130,7 @@ internal sealed class AuthService(IUserRepository users, IInputValidator validat
             return (false, "That DOD ID is already registered to another account.");
         }
 
-        User user = new() { Username = username, DodId = dodId, CreatedAt = DateTime.UtcNow };
+        User user = new() { Username = username, DodId = dodId, CreatedAt = clock.UtcNow };
 
         if (!string.IsNullOrEmpty(password))
         {
@@ -142,7 +139,7 @@ internal sealed class AuthService(IUserRepository users, IInputValidator validat
 
         if (!string.IsNullOrWhiteSpace(barcode))
         {
-            string barcodeHash = HashBarcode(barcode);
+            string barcodeHash = hasher.HashBarcode(barcode);
             if (await users.GetByBarcodeHash(barcodeHash, cancellation) is not null)
             {
                 return (false, "That badge is already registered to another user.");
@@ -179,7 +176,7 @@ internal sealed class AuthService(IUserRepository users, IInputValidator validat
             return false;
         }
 
-        User? user = await users.GetByBarcodeHash(HashBarcode(barcode.Trim()), cancellation);
+        User? user = await users.GetByBarcodeHash(hasher.HashBarcode(barcode.Trim()), cancellation);
         if (user is null)
         {
             return false;
@@ -356,7 +353,7 @@ internal sealed class AuthService(IUserRepository users, IInputValidator validat
             return (false, "Scan a badge first.", null);
         }
 
-        string barcodeHash = HashBarcode(barcode.Trim());
+        string barcodeHash = hasher.HashBarcode(barcode.Trim());
         User? existing = await users.GetByBarcodeHash(barcodeHash, cancellation);
         if (existing is not null && existing.Id != user.Id)
         {
@@ -368,22 +365,9 @@ internal sealed class AuthService(IUserRepository users, IInputValidator validat
 
     private User WithPassword(User user, string password)
     {
-        byte[] salt = RandomNumberGenerator.GetBytes(saltSize);
-        return user with { PasswordSalt = Convert.ToBase64String(salt), PasswordHash = Convert.ToBase64String(HashPassword(password, salt)) };
+        (string hash, string salt) = hasher.HashPassword(password);
+        return user with { PasswordSalt = salt, PasswordHash = hash };
     }
 
-    private bool PasswordMatches(User user, string password)
-    {
-        if (user.PasswordHash is null || user.PasswordSalt is null)
-        {
-            return false;
-        }
-
-        byte[] hash = HashPassword(password, Convert.FromBase64String(user.PasswordSalt));
-        return CryptographicOperations.FixedTimeEquals(hash, Convert.FromBase64String(user.PasswordHash));
-    }
-
-    private byte[] HashPassword(string password, byte[] salt) => Rfc2898DeriveBytes.Pbkdf2(password, salt, pbkdf2Iterations, HashAlgorithmName.SHA256, hashSize);
-
-    private string HashBarcode(string barcode) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(barcode)));
+    private bool PasswordMatches(User user, string password) => user.PasswordHash is not null && user.PasswordSalt is not null && hasher.VerifyPassword(password, user.PasswordHash, user.PasswordSalt);
 }

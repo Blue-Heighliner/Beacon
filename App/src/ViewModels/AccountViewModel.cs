@@ -1,7 +1,7 @@
 namespace BlueHeighliner.Beacon.ViewModels;
 
 /// <summary>Self-service password and badge changes for the signed-in user.</summary>
-internal sealed partial class AccountViewModel(IAuthService auth, Func<Task> onBack) : ViewModelBase
+internal sealed partial class AccountViewModel(IAuthService auth, INavigation navigation) : ViewModelBase
 {
     [ObservableProperty]
     private string currentPassword = "";
@@ -66,7 +66,7 @@ internal sealed partial class AccountViewModel(IAuthService auth, Func<Task> onB
     }
 
     [RelayCommand]
-    private Task Back() => onBack();
+    private Task Back() => navigation.ShowInventory();
 
     private void ShowStatus(string message, bool isError)
     {

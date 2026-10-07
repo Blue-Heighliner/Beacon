@@ -1,10 +1,10 @@
 # Navigation
 
-Covers `MainWindowViewModel` and `ViewLocator`: how screens are created and swapped.
+Covers `Navigation`, `MainWindowViewModel`, and `ViewLocator`: how screens are created and swapped.
 
 ## Screen swapping
 
-`MainWindowViewModel` exposes one `CurrentViewModel`. Showing a screen constructs its view model, awaits any `Load`, and only then assigns it, so bound views never render empty state that is about to be replaced. Screens receive `Func<Task>` callbacks for the transitions they trigger (sign-in succeeded, back, sign out) rather than a reference to the navigator.
+`Navigation` owns the current view model. Showing a screen resolves its view model from the container (registered transient, so each visit is fresh), awaits `ILoadable.Load` when the view model has one, and only then assigns it and raises `Changed`, so bound views never render empty state that is about to be replaced. `MainWindowViewModel` forwards `Changed` as a property change on `CurrentViewModel`. Screens depend on `INavigation` for the transitions they trigger, so none of them knows how another is built.
 
 ## View resolution
 

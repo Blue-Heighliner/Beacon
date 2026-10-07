@@ -1,7 +1,7 @@
 namespace BlueHeighliner.Beacon.ViewModels;
 
 /// <summary>Sign-in by password or badge, and new account registration.</summary>
-internal sealed partial class LoginViewModel(IAuthService auth, IThemeService theme, Func<Task> onLoginSucceeded) : ViewModelBase
+internal sealed partial class LoginViewModel(IAuthService auth, IThemeService theme, INavigation navigation) : ViewModelBase
 {
     [ObservableProperty]
     private string username = "";
@@ -44,7 +44,7 @@ internal sealed partial class LoginViewModel(IAuthService auth, IThemeService th
 
         if (await auth.LoginWithPassword(Username, Password))
         {
-            await onLoginSucceeded();
+            await navigation.ShowInventory();
         }
         else
         {
@@ -62,7 +62,7 @@ internal sealed partial class LoginViewModel(IAuthService auth, IThemeService th
 
         if (await auth.LoginWithBarcode(BadgeInput))
         {
-            await onLoginSucceeded();
+            await navigation.ShowInventory();
         }
         else
         {

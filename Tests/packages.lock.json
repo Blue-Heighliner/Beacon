@@ -2,6 +2,16 @@
   "version": 1,
   "dependencies": {
     "net10.0": {
+      "Avalonia.Headless.XUnit": {
+        "type": "Direct",
+        "requested": "[11.3.12, )",
+        "resolved": "11.3.12",
+        "contentHash": "8lhamuLF8nK1xd4R8SmwGXaW3ykMgfgJQy10/1SZCM2ujXIuSEacrk/hGMvZJU8YqBJu0nxpivzWznb2L/e0mw==",
+        "dependencies": {
+          "Avalonia.Headless": "11.3.12",
+          "xunit.core": "2.4.0"
+        }
+      },
       "coverlet.collector": {
         "type": "Direct",
         "requested": "[6.0.4, )",
@@ -124,6 +134,14 @@
         "dependencies": {
           "Avalonia": "11.3.12",
           "Tmds.DBus.Protocol": "0.21.2"
+        }
+      },
+      "Avalonia.Headless": {
+        "type": "Transitive",
+        "resolved": "11.3.12",
+        "contentHash": "TfeApC6x10xaihh/v10VPZbwIIJx/bPwS+yXIimXo3IlmydaJjSkolKlIYUvffeVfPCzNZobZLT3iYnb8mpi6Q==",
+        "dependencies": {
+          "Avalonia": "11.3.12"
         }
       },
       "Avalonia.Native": {
@@ -296,6 +314,19 @@
           "SQLitePCLRaw.core": "2.1.12"
         }
       },
+      "Microsoft.Extensions.DependencyInjection": {
+        "type": "Transitive",
+        "resolved": "10.0.0",
+        "contentHash": "f0RBabswJq+gRu5a+hWIobrLWiUYPKMhCD9WO3sYBAdSy3FFH14LMvLVFZc2kPSCimBLxSuitUhsd6tb0TAY6A==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.0"
+        }
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "Transitive",
+        "resolved": "10.0.0",
+        "contentHash": "L3AdmZ1WOK4XXT5YFPEwyt0ep6l8lGIPs7F5OOBZc77Zqeo01Of7XXICy47628sdVl0v/owxYJTe86DTgFwKCA=="
+      },
       "Microsoft.TestPlatform.ObjectModel": {
         "type": "Transitive",
         "resolved": "17.13.0",
@@ -451,6 +482,7 @@
           "ClosedXML": "[0.105.1, )",
           "CommunityToolkit.Mvvm": "[8.2.1, )",
           "Microsoft.Data.Sqlite": "[10.0.11, )",
+          "Microsoft.Extensions.DependencyInjection": "[10.0.0, )",
           "System.Security.Cryptography.ProtectedData": "[9.0.0, )",
           "Tmds.DBus.Protocol": "[0.21.3, )"
         }

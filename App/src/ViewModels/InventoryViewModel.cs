@@ -1,11 +1,11 @@
 namespace BlueHeighliner.Beacon.ViewModels;
 
 /// <summary>Scan entry, filtering, and deletion of inventory items.</summary>
-internal sealed partial class InventoryViewModel(IAuthService auth, IItemRepository items, IThemeService theme, IInputValidator validator, IExcelExportService excel, Func<Task> onLogout, Func<Task> onShowAccount, Func<Task> onShowUserManagement) : ViewModelBase
+internal sealed partial class InventoryViewModel(IAuthService auth, IItemRepository items, IThemeService theme, IInputValidator validator, IExcelExportService excel, IFilePicker filePicker, IClock clock, IUiTimerFactory timers, INavigation navigation) : ViewModelBase, ILoadable
 {
     private static readonly string allFilter = "All";
 
-    private DispatcherTimer? statusClearTimer;
+    private IUiTimer? statusClearTimer;
 
     private bool suppressRefresh;
 
@@ -66,16 +66,6 @@ internal sealed partial class InventoryViewModel(IAuthService auth, IItemReposit
         await RefreshItems();
     }
 
-    /// <summary>Exports items to an Excel workbook and reports the result.</summary>
-    /// <param name="filePath">The .xlsx file to write.</param>
-    /// <param name="filteredOnly">True to export only the items shown in the grid, false to export every item.</param>
-    public async Task Export(string filePath, bool filteredOnly)
-    {
-        List<InventoryItem> exported = filteredOnly ? [.. Items] : await items.Query();
-        await excel.Export(filePath, exported);
-        ShowStatus($"Exported {exported.Count} item(s) to {filePath}", isError: false);
-    }
-
     partial void OnSelectedCategoryFilterChanged(string value) => RefreshItemsCommand.Execute(null);
 
     partial void OnSelectedUserFilterChanged(string value) => RefreshItemsCommand.Execute(null);
@@ -106,7 +96,7 @@ internal sealed partial class InventoryViewModel(IAuthService auth, IItemReposit
             ItemName = ItemNameInput.Trim(),
             Category = CategoryInput.Trim(),
             InsertedBy = CurrentUsername,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = clock.UtcNow,
         });
 
         // Clear only the serial so name/category persist for rapid batch scanning.
@@ -161,14 +151,20 @@ internal sealed partial class InventoryViewModel(IAuthService auth, IItemReposit
     private Task Logout()
     {
         auth.Logout();
-        return onLogout();
+        return navigation.ShowLogin();
     }
 
     [RelayCommand]
-    private Task ShowAccount() => onShowAccount();
+    private Task ShowAccount() => navigation.ShowAccount();
 
     [RelayCommand]
-    private Task ShowUserManagement() => onShowUserManagement();
+    private Task ShowUserManagement() => navigation.ShowUserManagement();
+
+    [RelayCommand]
+    private Task ExportFiltered() => Export(filteredOnly: true);
+
+    [RelayCommand]
+    private Task ExportAll() => Export(filteredOnly: false);
 
     [RelayCommand]
     private void ToggleTheme() => theme.Toggle();
@@ -225,23 +221,24 @@ internal sealed partial class InventoryViewModel(IAuthService auth, IItemReposit
         }
     }
 
+    private async Task Export(bool filteredOnly)
+    {
+        string? filePath = await filePicker.PickExcelSavePath($"Inventory-{clock.UtcNow.ToLocalTime():yyyy-MM-dd}.xlsx");
+        if (filePath is null)
+        {
+            return;
+        }
+
+        List<InventoryItem> exported = filteredOnly ? [.. Items] : await items.Query();
+        await excel.Export(filePath, exported);
+        ShowStatus($"Exported {exported.Count} item(s) to {filePath}", isError: false);
+    }
+
     private void ShowStatus(string message, bool isError)
     {
         StatusMessage = message;
         StatusIsError = isError;
-        statusClearTimer ??= CreateStatusClearTimer();
-        statusClearTimer.Stop();
-        statusClearTimer.Start();
-    }
-
-    private DispatcherTimer CreateStatusClearTimer()
-    {
-        DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(4) };
-        timer.Tick += (_, _) =>
-        {
-            StatusMessage = "";
-            timer.Stop();
-        };
-        return timer;
+        statusClearTimer ??= timers.Create(TimeSpan.FromSeconds(4), () => StatusMessage = "");
+        statusClearTimer.Restart();
     }
 }

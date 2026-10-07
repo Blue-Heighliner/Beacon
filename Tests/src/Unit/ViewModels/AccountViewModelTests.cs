@@ -3,17 +3,13 @@ namespace BlueHeighliner.Beacon.Tests.Unit.ViewModels;
 public sealed class AccountViewModelTests
 {
     private readonly Mock<IAuthService> auth = new();
-    private int wentBack;
+    private readonly Mock<INavigation> navigation = new();
     private readonly AccountViewModel viewModel;
 
     public AccountViewModelTests()
     {
         auth.Setup(x => x.CurrentUser).Returns(new User { Id = 1, Username = "bob", DodId = "1234567890", CreatedAt = DateTime.UtcNow });
-        viewModel = new AccountViewModel(auth.Object, () =>
-        {
-            wentBack++;
-            return Task.CompletedTask;
-        });
+        viewModel = new AccountViewModel(auth.Object, navigation.Object);
     }
 
     [Fact]
@@ -92,6 +88,6 @@ public sealed class AccountViewModelTests
     {
         await viewModel.BackCommand.ExecuteAsync(null);
 
-        Assert.Equal(1, wentBack);
+        navigation.Verify(x => x.ShowInventory(), Times.Once);
     }
 }

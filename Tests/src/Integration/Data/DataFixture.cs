@@ -1,22 +1,26 @@
 namespace BlueHeighliner.Beacon.Tests.Integration.Data;
 
-/// <summary>A real SQLite database in a scratch folder, with the real cipher.</summary>
+/// <summary>A real SQLite database in a scratch folder, with the real cipher and hasher.</summary>
 internal sealed class DataFixture : IDisposable
 {
     private readonly TempDirectory directory = new();
 
     public DataFixture()
     {
-        Cipher = new DodIdCipher(directory.File("dodid.key"));
-        Database = new Database(directory.File("inventory.db"), Cipher);
+        Paths = new AppPaths(directory.Path);
+        Cipher = new AesDodIdCipher(new FileKeyStore(Paths));
+        Hasher = new DodIdHasher();
+        Database = new Database(Paths, Cipher, Hasher);
         Database.Initialize().GetAwaiter().GetResult();
     }
 
-    public DodIdCipher Cipher { get; }
+    public AppPaths Paths { get; }
+
+    public AesDodIdCipher Cipher { get; }
+
+    public DodIdHasher Hasher { get; }
 
     public Database Database { get; }
-
-    public string DirectoryPath => directory.Path;
 
     public void Dispose() => directory.Dispose();
 }

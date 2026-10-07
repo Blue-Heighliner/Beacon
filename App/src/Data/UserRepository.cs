@@ -47,7 +47,7 @@ internal interface IUserRepository
     Task<int> CountAdmins(CancellationToken cancellation = default);
 }
 
-internal sealed class UserRepository(IDatabase database, IDodIdCipher cipher) : IUserRepository
+internal sealed class UserRepository(IDatabase database, IDodIdCipher cipher, IDodIdHasher hasher) : IUserRepository
 {
     public async Task Create(User user, CancellationToken cancellation = default)
     {
@@ -105,7 +105,7 @@ internal sealed class UserRepository(IDatabase database, IDodIdCipher cipher) : 
 
     public Task<User?> GetByBarcodeHash(string barcodeHash, CancellationToken cancellation = default) => GetBy("BarcodeHash", barcodeHash, cancellation);
 
-    public Task<User?> GetByDodId(string dodId, CancellationToken cancellation = default) => GetBy("DodIdHash", cipher.Hash(dodId), cancellation);
+    public Task<User?> GetByDodId(string dodId, CancellationToken cancellation = default) => GetBy("DodIdHash", hasher.Hash(dodId), cancellation);
 
     public async Task<int> CountAdmins(CancellationToken cancellation = default)
     {
@@ -132,7 +132,7 @@ internal sealed class UserRepository(IDatabase database, IDodIdCipher cipher) : 
         command.Parameters.AddWithValue("$passwordSalt", (object?)user.PasswordSalt ?? DBNull.Value);
         command.Parameters.AddWithValue("$barcodeHash", (object?)user.BarcodeHash ?? DBNull.Value);
         command.Parameters.AddWithValue("$dodId", cipher.Encrypt(user.DodId));
-        command.Parameters.AddWithValue("$dodIdHash", cipher.Hash(user.DodId));
+        command.Parameters.AddWithValue("$dodIdHash", hasher.Hash(user.DodId));
         command.Parameters.AddWithValue("$isAdmin", user.IsAdmin ? 1 : 0);
     }
 
